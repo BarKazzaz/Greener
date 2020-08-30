@@ -1,23 +1,25 @@
 package com.example.greener;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthResult;
+import android.net.Uri;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
-import androidx.annotation.NonNull;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 public class Model {
 
     private static Model instance = null;
     private FirebaseAuth fbAuth;
     private DatabaseReference dbRef;
+    private StorageReference storageRef;
 
     private Model(){
         fbAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference();
+        storageRef = FirebaseStorage.getInstance().getReference();
     }
 
     public static Model getInstance(){
@@ -26,11 +28,23 @@ public class Model {
         return instance;
     }
 
+    private StorageReference getProfilePicturesStorage() {
+        return storageRef.child("Profile Pictures");
+    }
     public DatabaseReference getUsers() {
         return dbRef.child("Users");
     }
 
     public FirebaseAuth getAuth() {
         return fbAuth;
+    }
+
+    public UploadTask addProfilePicture(Uri pictureUri) {
+        StorageReference imagePath = getProfilePicturesStorage().child(getAuth().getCurrentUser().getUid() + ".jpg");
+        return imagePath.putFile(pictureUri);
+    }
+
+    public String getProfilePicture() {
+        return getProfilePicturesStorage().child(getAuth().getCurrentUser().getUid() + ".jpg").getDownloadUrl().toString();
     }
 }
