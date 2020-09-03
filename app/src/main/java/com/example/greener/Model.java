@@ -69,4 +69,16 @@ public class Model {
     public Task<Void> addPostToUser(String postId) {
         return getUsers().child(getAuth().getCurrentUser().getUid()).child("posts").child(postId).setValue(postId);
     }
+
+    public Task<Void> deletePost(String postId) {
+        return getPostsRef().child(postId).removeValue();
+    }
+
+    public Task<Void> deleteStoragePost(String postid){
+        return storageRef.child("PostImages").child(postid + ".jpg").delete();
+    }
+
+    public Task<Void> removeUserPost(String postId) {
+        return getUsers().child(getAuth().getCurrentUser().getUid()).child("posts").child(postId).removeValue();
+    }
 }

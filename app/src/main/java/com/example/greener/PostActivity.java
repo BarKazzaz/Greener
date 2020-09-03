@@ -18,8 +18,6 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
-import java.net.URI;
-import java.sql.Time;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,6 +36,7 @@ public class PostActivity extends AppCompatActivity {
     private ImageButton postImage;
     private EditText postContent;
     private Button updatePostButton;
+    private Button deletePostButton;
     private static final int GALLERY_REQUEST = 1;
     private Uri imageUrl = null;
     private String userName;
@@ -55,12 +54,13 @@ public class PostActivity extends AppCompatActivity {
         postImage = findViewById(R.id.postImageButton);
         postContent = findViewById(R.id.postContent);
         updatePostButton = findViewById(R.id.updatePostButton);
+        deletePostButton = findViewById(R.id.deletePostButton);
 
         toolbar = findViewById(R.id.update_post_toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
-        getSupportActionBar().setTitle("Update Post");
+        getSupportActionBar().setTitle("Edit Post");
 
 
         postImage.setOnClickListener(new View.OnClickListener() {
@@ -78,6 +78,7 @@ public class PostActivity extends AppCompatActivity {
                 canEdit = true;
                 userName = extras.getString("USER_NAME");
                 profilePictureUrl = extras.getString("PROFILE_PICTURE");
+                deletePostButton.setVisibility(View.INVISIBLE);
             } else if (canEdit) {
                 postId = extras.getString("POST_ID");
                 userName = extras.getString("USER_NAME");
@@ -94,16 +95,26 @@ public class PostActivity extends AppCompatActivity {
                 imageUrl = Uri.parse(pic);
                 Picasso.get().load(imageUrl).into(postImage);
                 postContent.setText(cont);
+                deletePostButton.setVisibility(View.INVISIBLE);
             }
         } else {
             // this means it's a new post
             isNew = true;
+            deletePostButton.setVisibility(View.INVISIBLE);
         }
         if (!(canEdit || isNew)) {
             updatePostButton.setVisibility(View.INVISIBLE);
             postContent.setEnabled(false);
             postImage.setOnClickListener(null);
         } else {
+            if (canEdit) {
+                deletePostButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        deletePost(postId);
+                    }
+                });
+            }
             updatePostButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -113,9 +124,63 @@ public class PostActivity extends AppCompatActivity {
         }
     }
 
+    private void disableInteraction() {
+        postImage.setEnabled(false);
+        deletePostButton.setEnabled(false);
+        updatePostButton.setEnabled(false);
+        getSupportActionBar().setHomeButtonEnabled(false);
+    }
+
+    private void enableInteraction() {
+        postImage.setEnabled(false);
+        deletePostButton.setEnabled(true);
+        updatePostButton.setEnabled(true);
+        getSupportActionBar().setHomeButtonEnabled(true);
+    }
+
+    private void deletePost(final String postId) {
+        disableInteraction();
+        Model.getInstance().deletePost(postId).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()) {
+                    Model.getInstance().deleteStoragePost(postId).addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if (task.isSuccessful()) {
+                                Model.getInstance().removeUserPost(postId).addOnCompleteListener(new OnCompleteListener<Void>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<Void> task) {
+                                        if (task.isSuccessful()) {
+                                            Toast.makeText(PostActivity.this, "Post deleted", Toast.LENGTH_SHORT).show();
+                                            enableInteraction();
+                                            finish();
+                                        } else {
+                                            Toast.makeText(PostActivity.this, task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                                            enableInteraction();
+                                        }
+                                    }
+                                });
+                            } else {
+                                Toast.makeText(PostActivity.this, task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                                enableInteraction();
+                            }
+                        }
+                    });
+                } else {
+                    Toast.makeText(PostActivity.this, task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    enableInteraction();
+                }
+            }
+        });
+    }
+
     private void validatePost() {
-        if (!(canEdit || isNew))
+        disableInteraction();
+        if (!(canEdit || isNew)) {
+            enableInteraction();
             return;
+        }
         Boolean valid = true;
         if (TextUtils.isEmpty(postContent.getText())) {
             Toast.makeText(this, "Missing post content..", Toast.LENGTH_LONG).show();
@@ -129,13 +194,13 @@ public class PostActivity extends AppCompatActivity {
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMMM-yyyy");
             dateFormat.setTimeZone(TimeZone.getTimeZone("gmt"));
             final String date = dateFormat.format(new Date());
+            final String time = getGMTtTime();
             if (postId == null) {
-                postId = UUID.randomUUID().toString();
+                postId = date + time + UUID.randomUUID().toString();
             }
             final String id = postId;
             final Uri picUri = imageUrl;
             final String content = this.postContent.getText().toString();
-            final String time = getGMTtTime();
             final String user = userName;
             final String profilePicUrl = profilePictureUrl;
             if (canEdit) {
@@ -145,11 +210,13 @@ public class PostActivity extends AppCompatActivity {
                 if (picUri.toString().equals(originalPic)) {
                     if (content.equals(originalContent)) {
                         Toast.makeText(PostActivity.this, "No updates made", Toast.LENGTH_SHORT).show();
+                        enableInteraction();
                         finish();
                         return;
                     } else {
                         Post post = new Post(date, id, picUri.toString(), content, time, user, profilePicUrl);
                         updatePosts(post);
+                        enableInteraction();
                         return;
                     }
                 }
@@ -184,6 +251,7 @@ public class PostActivity extends AppCompatActivity {
                     });
 
         }
+        enableInteraction();
     }
 
     private void updatePosts(final Post post) {

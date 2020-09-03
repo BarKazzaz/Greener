@@ -133,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        showAllPosts();
     }
 
     public static class FeedViewHolder extends RecyclerView.ViewHolder{
@@ -225,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
             redirectToLogin();
         } else {
             profileIsSet();
+            showAllPosts();
         }
     }
 
@@ -290,15 +290,9 @@ public class MainActivity extends AppCompatActivity {
             case R.id.nav_home:
                 Toast.makeText(this, "Home", Toast.LENGTH_LONG).show();
                 break;
-            case R.id.nav_Friends:
-                Toast.makeText(this, "Friends", Toast.LENGTH_LONG).show();
-                break;
-            case R.id.nav_search_friends:
-                Toast.makeText(this, "Find Friends", Toast.LENGTH_LONG).show();
-                break;
-            case R.id.nav_settings:
-                Toast.makeText(this, "Settings", Toast.LENGTH_LONG).show();
-                break;
+//            case R.id.nav_myPosts:
+//                redirectToMyPosts();
+//                break;
             case R.id.nav_post:
                 redirectToPostActivity();
                 break;
