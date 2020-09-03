@@ -2,6 +2,7 @@ package com.example.greener;
 
 import android.net.Uri;
 
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -46,5 +47,26 @@ public class Model {
 
     public String getProfilePicture() {
         return getProfilePicturesStorage().child(getAuth().getCurrentUser().getUid() + ".jpg").getDownloadUrl().toString();
+    }
+
+    private void addPostContentToDB(String postContent) {
+    }
+
+    public UploadTask addPostImageToStorage(Uri postImage, String id) {
+        StorageReference imagePath = storageRef.child("PostImages").child(id + ".jpg");
+        return imagePath.putFile(postImage);
+    }
+
+    public Task<Void> addPost(Post post) {
+        DatabaseReference postPath = dbRef.child("Posts").child(post.getId());
+        return postPath.updateChildren(post.toMap());
+    }
+
+    public DatabaseReference getPostsRef() {
+        return dbRef.child("Posts");
+    }
+
+    public Task<Void> addPostToUser(String postId) {
+        return getUsers().child(getAuth().getCurrentUser().getUid()).child("posts").child(postId).setValue(postId);
     }
 }
